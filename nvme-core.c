@@ -1597,8 +1597,10 @@ struct nvme_iod *nvme_map_user_pages(struct nvme_dev *dev, int write,
  free_iod:
 	kfree(iod);
  put_pages:
-	for (i = 0; i < count; i++)
-		put_page(pages[i]);
+	for (i = 0; i < count; i++) {
+		if (pages[i] != NULL)
+			put_page(pages[i]);
+	}
 	kfree(pages);
 	return ERR_PTR(err);
 }
