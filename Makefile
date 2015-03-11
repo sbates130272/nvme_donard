@@ -19,7 +19,7 @@ default: modules
 install: modules_install
 	cp donard-nvme-blacklist.conf /etc/modprobe.d
 	cp 80-donard.rules /etc/udev/rules.d
-	update-initramfs -u
+	update-initramfs -u -k $(KERNEL_UNAME)
 
 .PHONY: install
 
