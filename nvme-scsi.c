@@ -17,8 +17,7 @@
  * each command is translated.
  */
 
-#include "nvme.h"
-
+#include <linux/nvme.h>
 #include <linux/bio.h>
 #include <linux/bitops.h>
 #include <linux/blkdev.h>

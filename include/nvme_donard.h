@@ -2,9 +2,6 @@
  * Definitions for the NVM Express interface
  * Copyright (c) 2011-2014, Intel Corporation.
  *
- *  Modified Jan 24, 2014 by Logan Gunthorpe (PMC-Sierra, Inc.) with interfaces
- *    for nvme-donard.c
- *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
@@ -513,25 +510,8 @@ struct nvme_admin_cmd {
 	__u32	result;
 };
 
-struct nvme_gpu_io {
-    __u8    opcode;
-    __u8    flags;
-    __u16   control;
-    __u16   nblocks;
-    __u16   rsvd;
-    __u64   slba;
-    __u32   dsmgmt;
-    __u32   reftag;
-    __u16   apptag;
-    __u16   appmask;
-    void    *gpu_mem_handle;
-    __u64   gpu_mem_offset;
-};
-
-
 #define NVME_IOCTL_ID		_IO('N', 0x40)
 #define NVME_IOCTL_ADMIN_CMD	_IOWR('N', 0x41, struct nvme_admin_cmd)
 #define NVME_IOCTL_SUBMIT_IO	_IOW('N', 0x42, struct nvme_user_io)
-#define NVME_IOCTL_SUBMIT_GPU_IO         _IOW('N', 0x45, struct nvme_gpu_io)
 
 #endif /* _UAPI_LINUX_NVME_H */
