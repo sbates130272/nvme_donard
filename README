@@ -1,5 +1,5 @@
 
-Copy of the NVME kernel module from 3.16.1, to be modified for the
+Copy of the NVME kernel module from 3.19.1, to be modified for the
 Donard project. Includes code to DMA directly between NVMe devices and
 NVIDIA GPUs.
 
