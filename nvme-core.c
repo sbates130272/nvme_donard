@@ -2,6 +2,9 @@
  * NVM Express device driver
  * Copyright (c) 2011-2014, Intel Corporation.
  *
+ * Modified Jan 24, 2014 by Logan Gunthorpe (PMC-Sierra, Inc.) to hook
+ *   into nvme-donard.c
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
@@ -12,7 +15,8 @@
  * more details.
  */
 
-#include <linux/nvme.h>
+#include "nvme.h"
+
 #include <linux/bio.h>
 #include <linux/bitops.h>
 #include <linux/blkdev.h>
@@ -367,7 +371,7 @@ static int nvme_npages(unsigned size)
 	return DIV_ROUND_UP(8 * nprps, PAGE_SIZE - 8);
 }
 
-static struct nvme_iod *
+struct nvme_iod *
 nvme_alloc_iod(unsigned nseg, unsigned nbytes, gfp_t gfp)
 {
 	struct nvme_iod *iod = kmalloc(sizeof(struct nvme_iod) +
@@ -1489,6 +1493,41 @@ static int nvme_configure_admin_queue(struct nvme_dev *dev)
 	return result;
 }
 
+static int handle_pfn_pages(struct scatterlist *sg, unsigned long start,
+                            unsigned long length)
+{
+	int i = 0;
+	struct vm_area_struct *vma = NULL;
+	unsigned long pfn;
+	struct mm_struct *mm = current->mm;
+
+	do {
+		vma = find_vma(mm, start);
+		if (!vma || !(vma->vm_flags & VM_PFNMAP))
+			return -EFAULT;
+
+		sg[i].page_link = 0;
+
+		if (follow_pfn(vma, start, &pfn))
+			return -EINVAL;
+
+		sg[i].dma_address = pfn << PAGE_SHIFT;
+		sg[i].length = min_t(unsigned, length, vma->vm_end - start);
+		sg[i].dma_length = sg[i].length;
+		sg[i].offset = 0;
+
+		length -= sg[i].dma_length;
+		start += sg[i].dma_length;
+		i++;
+
+	} while (length);
+
+	sg_mark_end(&sg[i - 1]);
+
+	return 0;
+}
+
+
 struct nvme_iod *nvme_map_user_pages(struct nvme_dev *dev, int write,
 				unsigned long addr, unsigned length)
 {
@@ -1508,17 +1547,26 @@ struct nvme_iod *nvme_map_user_pages(struct nvme_dev *dev, int write,
 	if (!pages)
 		return ERR_PTR(-ENOMEM);
 
-	err = get_user_pages_fast(addr, count, 1, pages);
-	if (err < count) {
-		count = err;
-		err = -EFAULT;
-		goto put_pages;
-	}
-
 	err = -ENOMEM;
 	iod = nvme_alloc_iod(count, length, GFP_KERNEL);
 	if (!iod)
 		goto put_pages;
+
+	err = get_user_pages_fast(addr, count, 1, pages);
+	if (err == -EFAULT) {
+		sg_init_table(iod->sg, count);
+		if (handle_pfn_pages(iod->sg, addr, length)) {
+			err = -EFAULT;
+			goto free_iod;
+		}
+
+		kfree(pages);
+		return iod;
+	} else if (err < count) {
+		count = err;
+		err = -EFAULT;
+		goto free_iod;
+	}
 
 	sg = iod->sg;
 	sg_init_table(sg, count);
@@ -1533,7 +1581,7 @@ struct nvme_iod *nvme_map_user_pages(struct nvme_dev *dev, int write,
 	iod->nents = count;
 
 	nents = dma_map_sg(&dev->pci_dev->dev, sg, count,
-				write ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+                               write ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 	if (!nents)
 		goto free_iod;
 
@@ -1751,7 +1799,7 @@ static int nvme_ioctl(struct block_device *bdev, fmode_t mode, unsigned int cmd,
 	case SG_IO:
 		return nvme_sg_io(ns, (void __user *)arg);
 	default:
-		return -ENOTTY;
+		return nvme_donard_ioctl(ns, cmd, arg);;
 	}
 }
 
