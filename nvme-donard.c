@@ -53,7 +53,7 @@ static struct nvme_iod *map_gpu_pages(struct nvme_dev *dev,
     if (!length || length > INT_MAX - PAGE_SIZE)
         return ERR_PTR(-EINVAL);
 
-    iod = nvme_alloc_iod(pages->entries, length, GFP_KERNEL);
+    iod = nvme_alloc_iod(pages->entries, length, dev, GFP_KERNEL);
     if (!iod)
         return ERR_PTR(-ENOMEM);
 
@@ -146,7 +146,7 @@ static int submit_gpu_io(struct nvme_ns *ns, struct nvme_gpu_io __user *uio)
 	if (length != (io.nblocks + 1) << ns->lba_shift)
 		status = -ENOMEM;
 	else
-        status = nvme_submit_io_cmd(dev, &c, NULL);
+        status = nvme_submit_io_cmd(dev, ns, &c, NULL);
 
 	nvme_free_iod(dev, iod);
 

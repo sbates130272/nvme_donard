@@ -2,6 +2,9 @@
  * Definitions for the NVM Express interface
  * Copyright (c) 2011-2014, Intel Corporation.
  *
+ *  Modified Jan 24, 2014 by Logan Gunthorpe (PMC-Sierra, Inc.) with interfaces
+ *    for nvme-donard.c
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
@@ -15,7 +18,7 @@
 #ifndef _LINUX_NVME_H
 #define _LINUX_NVME_H
 
-#include <uapi/linux/nvme.h>
+#include "nvme_donard.h"
 #include <linux/pci.h>
 #include <linux/miscdevice.h>
 #include <linux/kref.h>
@@ -147,6 +150,10 @@ static inline u64 nvme_block_nr(struct nvme_ns *ns, sector_t sector)
 	return (sector >> (ns->lba_shift - 9));
 }
 
+
+struct nvme_iod *nvme_alloc_iod(unsigned nseg, unsigned nbytes,
+				struct nvme_dev *dev, gfp_t gfp);
+
 /**
  * nvme_free_iod - frees an nvme_iod
  * @dev: The device that the I/O was submitted to
@@ -176,5 +183,8 @@ struct sg_io_hdr;
 int nvme_sg_io(struct nvme_ns *ns, struct sg_io_hdr __user *u_hdr);
 int nvme_sg_io32(struct nvme_ns *ns, unsigned long arg);
 int nvme_sg_get_version_num(int __user *ip);
+
+/* Donard Functions */
+int nvme_donard_ioctl(struct nvme_ns *ns, unsigned int cmd, unsigned long arg);
 
 #endif /* _LINUX_NVME_H */
