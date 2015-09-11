@@ -12,7 +12,7 @@ else
 endif
 
 
-NVIDIA_SRC := /usr/src/nvidia-331-331.62
+NVIDIA_SRC := /usr/src/nvidia-346-346.46
 
 default: modules
 .PHONY: default
